@@ -17,11 +17,12 @@ Legend: **Implemented** = code exists, compiles and does the described work.
 | Unit tests executed | **no** — written, not run |
 | On-device run, export playback, encoder probing | **not executed** |
 | Packaged class set vs. referenced class set | **331 referenced, 0 missing** |
+| Library resource IDs present in `resources.arsc` | **23 R-references, 280 resources packaged** |
 
 ### About the APK
 
-`O-Editor-1.0.1.apk` (9.2 MB) is built and signed: package `com.oeditor.app`, versionCode
-2, versionName 1.0.1, minSdk 31, targetSdk 34, launchable activity
+`O-Editor-1.0.2.apk` (9.7 MB) is built and signed: package `com.oeditor.app`, versionCode
+3, versionName 1.0.2, minSdk 31, targetSdk 34, launchable activity
 `com.oeditor.app.MainActivity`, three dex files, verified with `apksigner verify` and
 `aapt2 dump badging`.
 

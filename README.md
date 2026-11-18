@@ -35,10 +35,10 @@ partial and what is not built. Nothing there is marked complete unless it exists
 A signed, installable APK is attached to the GitHub release:
 
 ```
-O-Editor-1.0.1.apk   (9.2 MB, com.oeditor.app, Android 12+)
+O-Editor-1.0.2.apk   (9.7 MB, com.oeditor.app, Android 12+)
 ```
 
-Install with `adb install O-Editor-1.0.1.apk`, or copy it to the device and open it (allow
+Install with `adb install -r O-Editor-1.0.2.apk`, or copy it to the device and open it (allow
 "install unknown apps" for your file manager). It is signed with the O Editor release key
 included in this repository's release notes; keep that key to ship updates.
 
@@ -61,8 +61,10 @@ produces an installable but non-distributable APK.
 
 ## Bug status
 
-1.0.0 crashed on launch because the coroutines Main dispatcher was not packaged. 1.0.1 fixes
-that and twelve further crash/ANR paths — see `docs/BUG-HUNT.md` for the evidence.
+1.0.0 crashed on launch for two independent reasons: the coroutines Main dispatcher was not
+packaged, and no AndroidX library resources were in the resource table. 1.0.2 fixes both, plus
+twelve further crash/ANR paths. Evidence and method: `docs/CRASH-REPORT.md` and
+`docs/BUG-HUNT.md`.
 
 ## Module map
 

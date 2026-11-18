@@ -54,14 +54,23 @@ kc -Xplugin="$COMPOSE_PLUGIN" -Xplugin="$SER_PLUGIN" \
 
 # ---------------------------------------------------------------- resources
 echo "== resources"
+# Library resources MUST be linked in, or any library R lookup fails at runtime with
+# Resources$NotFoundException (this is what Gradle's resource merging does for you).
+python3 tools/extract-aar-res.py "$GRADLE_CACHE" "$WORK/aar_res"
 ( cd app/src/main
-  "$BUILD_TOOLS/aapt2" compile --dir res -o "../../$WORK/flat/res.zip"
+  "$BUILD_TOOLS/aapt2" compile --dir res -o "../../$WORK/flat/app.zip"
   sed -e 's|<manifest xmlns:android="http://schemas.android.com/apk/res/android">|<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.oeditor.app">|' \
-      -e 's|${applicationId}|com.oeditor.app|g' AndroidManifest.xml > "../../$WORK/AndroidManifest.xml"
-  "$BUILD_TOOLS/aapt2" link -o "../../$WORK/base.ap_" \
-      -I "$ANDROID_JAR" --manifest "../../$WORK/AndroidManifest.xml" \
-      --min-sdk-version 31 --target-sdk-version 34 \
-      --version-code 1 --version-name 1.0.0 --auto-add-overlay "../../$WORK/flat/res.zip" )
+      -e 's|${applicationId}|com.oeditor.app|g' AndroidManifest.xml > "../../$WORK/AndroidManifest.xml" )
+for d in "$WORK"/aar_res/*/res; do
+  [ -d "$d" ] || continue
+  name=$(basename "$(dirname "$d")")
+  "$BUILD_TOOLS/aapt2" compile --dir "$d" -o "$WORK/flat/lib-$name.zip" 2>/dev/null || true
+done
+"$BUILD_TOOLS/aapt2" link -o "$WORK/base.ap_" \
+    -I "$ANDROID_JAR" --manifest "$WORK/AndroidManifest.xml" \
+    --min-sdk-version 31 --target-sdk-version 34 \
+    --version-code 3 --version-name 1.0.2 --auto-add-overlay \
+    $(ls "$WORK"/flat/lib-*.zip 2>/dev/null | tr '\n' ' ') "$WORK/flat/app.zip"
 
 # ---------------------------------------------------------------- dex (3 groups: d8 is slow on big graphs)
 echo "== dexing"
@@ -108,6 +117,13 @@ cp "$WORK/dex1/classes.dex"  "$WORK/classes.dex"
 cp "$WORK/dex2/classes.dex"  "$WORK/classes2.dex"
 cp "$WORK/dex3/classes.dex"  "$WORK/classes3.dex"
 ( cd "$WORK" && zip -q unsigned.apk classes.dex classes2.dex classes3.dex )
+# ServiceLoader entries (kotlinx-coroutines uses these to discover its dispatchers)
+( cd "$WORK" && for jar in "$@"; do :; done )
+unzip -oq "$(find "$GRADLE_CACHE/modules-2" -name 'kotlinx-coroutines-android-*.jar' | head -1)" \
+   'META-INF/services/*' -d "$WORK" 2>/dev/null || true
+if [ -d "$WORK/META-INF/services" ]; then
+  ( cd "$WORK" && zip -q unsigned.apk META-INF/services/* )
+fi
 "$BUILD_TOOLS/zipalign" -p -f 4 "$WORK/unsigned.apk" "$WORK/aligned.apk"
 
 if [ ! -f keystore.properties ]; then
@@ -124,8 +140,8 @@ else
 fi
 "$BUILD_TOOLS/apksigner" sign --ks "$KS" --ks-key-alias "$ALIAS" \
   --ks-pass "pass:$KSPASS" --key-pass "pass:${KEYPASS:-$KSPASS}" \
-  --out "$OUT/O-Editor-1.0.0.apk" "$WORK/aligned.apk"
+  --out "$OUT/O-Editor-1.0.2.apk" "$WORK/aligned.apk"
 
-"$BUILD_TOOLS/apksigner" verify --print-certs "$OUT/O-Editor-1.0.0.apk"
-"$BUILD_TOOLS/aapt2" dump badging "$OUT/O-Editor-1.0.0.apk" | head -4
-echo "APK: $OUT/O-Editor-1.0.0.apk"
+"$BUILD_TOOLS/apksigner" verify --print-certs "$OUT/O-Editor-1.0.2.apk"
+"$BUILD_TOOLS/aapt2" dump badging "$OUT/O-Editor-1.0.2.apk" | head -4
+echo "APK: $OUT/O-Editor-1.0.2.apk"
